@@ -1,0 +1,12 @@
+# build files
+*.o
+
+# library files
+*.a
+
+# misc
+*~
+
+# examples executables
+/examples/ex-*
+!/examples/ex-*.*
