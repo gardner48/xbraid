@@ -1,20 +1,20 @@
 /*BHEADER**********************************************************************
- * Copyright (c) 2013, Lawrence Livermore National Security, LLC. 
- * Produced at the Lawrence Livermore National Laboratory. Written by 
- * Jacob Schroder, Rob Falgout, Tzanio Kolev, Ulrike Yang, Veselin 
+ * Copyright (c) 2013, Lawrence Livermore National Security, LLC.
+ * Produced at the Lawrence Livermore National Laboratory. Written by
+ * Jacob Schroder, Rob Falgout, Tzanio Kolev, Ulrike Yang, Veselin
  * Dobrev, et al. LLNL-CODE-660355. All rights reserved.
- * 
+ *
  * This file is part of XBraid. For support, post issues to the XBraid Github page.
- * 
+ *
  * This program is free software; you can redistribute it and/or modify it under
  * the terms of the GNU General Public License (as published by the Free Software
  * Foundation) version 2.1 dated February 1999.
- * 
+ *
  * This program is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the IMPLIED WARRANTY OF MERCHANTABILITY or FITNESS FOR A
  * PARTICULAR PURPOSE. See the terms and conditions of the GNU General Public
  * License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public License along
  * with this program; if not, write to the Free Software Foundation, Inc., 59
  * Temple Place, Suite 330, Boston, MA 02111-1307 USA
@@ -25,8 +25,8 @@
  * Example:       ex-03-serial.c
  *
  * Interface:     C
- * 
- * Requires:      hypre 
+ *
+ * Requires:      hypre
  *
  * Compile with:  make ex-03-serial
  *
@@ -35,12 +35,12 @@
  * Sample run:    mpirun -np 9 ex-03-serial -pgrid 3 3 -nx 33 33
  *
  * Description:   Solves the 2D heat equation on a regular grid in space and time,
- *                using backward Euler in time and classic second order 
+ *                using backward Euler in time and classic second order
  *                finite-differencing in space.
  *
- *                The key difference withe ex-03.c is that this is a strictly 
- *                sequential time integration code, created for readers to 
- *                compare with ex-03.c. 
+ *                The key difference withe ex-03.c is that this is a strictly
+ *                sequential time integration code, created for readers to
+ *                compare with ex-03.c.
  *
  *                For more details on the discretization, see the header comment in ex-03.c.
  **/
@@ -64,12 +64,12 @@ int main (int argc, char *argv[])
 
    int print_usage = 0;
    int object_type = HYPRE_STRUCT;
-   int i, arg_index, myid, num_procs, iters_taken, max_iters_taken;
+   int i, arg_index, myid, num_procs, iters_taken, total_iters_taken, max_iters_taken;
    int ndim, nx, ny, nlx, nly, nt, forcing, ilower[2], iupper[2];
    double K, tstart, tstop, dx, dy, dt, cfl, tol;
    double myendtime, mystarttime, mytime, maxtime;
    double disc_err, max_disc_err, max_disc_err_time;
-   int max_iter, px, py, pi, pj, output_files, vis, max_disc_err_iter;
+   int max_iter, px, py, pi, pj, output_files, vis, max_disc_err_iter, logging;
    char filename[255], filename_mesh[255], filename_err[255], filename_sol[255];
 
    /* Initialize MPI */
@@ -93,6 +93,7 @@ int main (int argc, char *argv[])
    tol                 = 1.0e-09; /* PFMG halting tolerance */
    output_files        = 0;       /* Boolean, if 1 output the norm of the discretization error to a file for each time step */
    vis                 = 0;       /* Boolean, if 1 output GLVIS files of error, solution and true solution */
+   logging             = 0;       /* Print logging information */
 
    MPI_Comm_rank( comm, &myid );
    MPI_Comm_size( comm, &num_procs );
@@ -138,6 +139,11 @@ int main (int argc, char *argv[])
          arg_index++;
          vis = 1;
       }
+      else if( strcmp(argv[arg_index], "-logging") == 0 )
+      {
+         logging = 1;
+         break;
+      }
       else if( strcmp(argv[arg_index], "-help") == 0 )
       {
          print_usage = 1;
@@ -157,12 +163,12 @@ int main (int argc, char *argv[])
       printf(" ---------------------------------------\n");
       printf("  -pgrid  <px py>                  : processors in each dimension (default: 1 1)\n");
       printf("  -nx  <nx ny>                     : 2D spatial problem size of form 2^k+1, 2^k+1 (default: 17 17)\n");
-      printf("  -nt  <n>                         : number of time steps (default: 32)\n"); 
-      printf("  -cfl <cfl>                       : CFL number to run (default: 0.30)\n"); 
+      printf("  -nt  <n>                         : number of time steps (default: 32)\n");
+      printf("  -cfl <cfl>                       : CFL number to run (default: 0.30)\n");
       printf("                                     Note: CFL = K*(dt/dx^2 + dt/dy^2) is used to define dt and t-final\n");
       printf("  -forcing                         : consider non-zero RHS b(x,y,t) = -sin(x)*sin(y)*(sin(t)-2*cos(t))\n");
-      printf("  -pfmg_mi <max_iter>              : maximum number of PFMG iterations (default: 50)\n"); 
-      printf("  -pfmg_tol <tol>                  : loose and tight stopping tolerance for PFMG (default: 1e-09 1e-09)\n"); 
+      printf("  -pfmg_mi <max_iter>              : maximum number of PFMG iterations (default: 50)\n");
+      printf("  -pfmg_tol <tol>                  : loose and tight stopping tolerance for PFMG (default: 1e-09 1e-09)\n");
       printf("  -output_files                    : save the solution/error/error norms to files\n");
       printf("                                     frequency of file accesss is set by access_level\n");
       printf("  -output_vis                      : save the error for GLVis visualization\n");
@@ -184,14 +190,14 @@ int main (int argc, char *argv[])
        return (0);
    }
 
-   /* Determine position (pi, pj)  in the 2D processor grid, 
+   /* Determine position (pi, pj)  in the 2D processor grid,
     * 0 <= pi < px,   0 <= pj < py */
    pi = myid % px;
    pj = ( (myid - pi)/px ) % py;
 
    /* Define the 2D block of the global grid owned by this processor, that is
     * (ilower[0], iupper[0]) x (ilower[1], iupper[1])
-    * defines the piece of the global grid owned by this processor. */ 
+    * defines the piece of the global grid owned by this processor. */
    GetDistribution_x( nx, px, pi, &ilower[0], &iupper[0] );
    GetDistribution_x( ny, py, pj, &ilower[1], &iupper[1] );
 
@@ -203,16 +209,16 @@ int main (int argc, char *argv[])
    dx = PI / (nx - 1);
    dy = PI / (ny - 1);
 
-   /* Set time-step size, noting that the CFL number definition 
+   /* Set time-step size, noting that the CFL number definition
     *     K*(dt/dx^2 + dt/dy^2) = CFL
-    * implies that dt is equal to 
+    * implies that dt is equal to
     *     dt = ( CFL dx^2 dy^2) / ( K(dx^2 + dy^2)) */
    dt = (cfl*(dx*dx)*(dy*dy)) / (K*((dx*dx)+(dy*dy)));
    /* Now using dt, compute the final time, tstop value */
    tstop =  tstart + nt*dt;
 
    /* -----------------------------------------------------------------
-    * Set up the manager 
+    * Set up the manager
     * ----------------------------------------------------------------- */
    man               = (simulation_manager *) malloc(sizeof(simulation_manager));
    man->comm         = comm;
@@ -243,13 +249,14 @@ int main (int argc, char *argv[])
    man->output_vis   = vis;
    man->output_files = output_files;
    man->explicit     = 0;
+   man->logging      = logging;
 
    /* Set up the variable type, grid, stencil and matrix graph. */
    man->vartype           = HYPRE_SSTRUCT_VARIABLE_CELL;
    setUp2Dgrid( comm, &(man->grid_x), man->dim_x,
                 man->ilower, man->iupper, man->vartype, 1 );
    set5ptStencil( &(man->stencil), man->dim_x );
-   setUpGraph( comm, &(man->graph), man->grid_x, man->object_type, 
+   setUpGraph( comm, &(man->graph), man->grid_x, man->object_type,
                man->stencil );
 
    /* Set up initial state vector */
@@ -257,7 +264,7 @@ int main (int argc, char *argv[])
 
    /* Set up error vector */
    initialize_vector(man, &e);
- 
+
    /* Set up the matrix */
    setUpImplicitMatrix( man );
    setUpStructSolver( man, u, u );
@@ -267,9 +274,10 @@ int main (int argc, char *argv[])
       printf("  Begin simulation \n");
       printf("  --------------------- \n\n");
    }
-   
+
    /* Run a simulation */
    mystarttime = MPI_Wtime();
+   total_iters_taken = 0;
    max_iters_taken = -1;
    max_disc_err = -1.;
    tstart = 0.0;
@@ -279,7 +287,7 @@ int main (int argc, char *argv[])
       if( myid == 0 ) {
          if( i % 50 == 0)  printf("  Taking iteration %d...\n", i);
       }
-      
+
       /* Take Step */
       take_step(man, u, NULL, u, tstart, tstop, &iters_taken);
       if( i < man->nt-1){
@@ -291,10 +299,11 @@ int main (int argc, char *argv[])
       compute_disc_err(man, u, tstop, e, &disc_err);
       if( man->output_files ){
          sprintf(filename, "%s.timestep%05d", "ex-03-serial.error_norm", i);
-         output_error_file(man, tstop, disc_err, filename); 
+         output_error_file(man, tstop, disc_err, filename);
       }
 
       /* Store PFMG iters taken and maximum discretization error */
+      total_iters_taken += iters_taken;
       max_iters_taken = max_i(max_iters_taken, iters_taken);
       max_disc_err = max_d(max_disc_err, disc_err);
       if( max_disc_err == disc_err) {
@@ -313,22 +322,24 @@ int main (int argc, char *argv[])
       printf("\n  --------------------- \n");
       printf("  End simulation \n");
       printf("  --------------------- \n\n");
-      
+
       printf("  Start time                    %1.5e\n", 0.0);
       printf("  Stop time                     %1.5e\n", tstop);
       printf("  Time step size                %1.5e\n", man->dt);
       printf("  Time steps taken:             %d\n\n", i);
       printf("  Spatial grid size:            %d,%d\n", man->nx, man->ny);
-      printf("  Spatial mesh width (dx,dy):  (%1.2e, %1.2e)\n", man->dx, man->dy);           
+      printf("  Spatial mesh width (dx,dy):  (%1.2e, %1.2e)\n", man->dx, man->dy);
       printf("  CFL ratio 2dt/(dx^2 + dy^2):  %1.2e\n\n",
             man->K*((man->dt)/((man->dx)*(man->dx)) + (man->dt)/((man->dy)*(man->dy))));
       printf("  Run time:                     %1.2e\n", maxtime);
+      printf("  Total PFMG Iterations:        %d\n", total_iters_taken);
       printf("  Max PFMG Iterations:          %d\n", max_iters_taken);
+      printf("  PFMG Iterations per step:     %d\n", total_iters_taken / man->nt);
       printf("  Discr. error at final time:   %1.4e\n", disc_err);
       printf("  Max discr. error:             %1.2e\n",max_disc_err);
       printf("     found at iteration:        %d\n", max_disc_err_iter);
       printf("     found at time:             %1.2e\n\n", max_disc_err_time);
-   }      
+   }
 
    /* Visualize final error */
    if( man->output_vis){
@@ -347,7 +358,7 @@ int main (int argc, char *argv[])
    HYPRE_SStructMatrixDestroy( man->A );
    HYPRE_StructPFMGDestroy( man->solver );
    free(man);
-   
+
    MPI_Finalize();
    return 0;
 }
