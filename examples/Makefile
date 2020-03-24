@@ -1,21 +1,21 @@
 #BHEADER**********************************************************************
 #
-# Copyright (c) 2013, Lawrence Livermore National Security, LLC. 
-# Produced at the Lawrence Livermore National Laboratory. Written by 
-# Jacob Schroder, Rob Falgout, Tzanio Kolev, Ulrike Yang, Veselin 
+# Copyright (c) 2013, Lawrence Livermore National Security, LLC.
+# Produced at the Lawrence Livermore National Laboratory. Written by
+# Jacob Schroder, Rob Falgout, Tzanio Kolev, Ulrike Yang, Veselin
 # Dobrev, et al. LLNL-CODE-660355. All rights reserved.
-# 
+#
 # This file is part of XBraid. For support, post issues to the XBraid Github page.
-# 
+#
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of the GNU General Public License (as published by the Free Software
 # Foundation) version 2.1 dated February 1999.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT ANY
 # WARRANTY; without even the IMPLIED WARRANTY OF MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE. See the terms and conditions of the GNU General Public
 # License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc., 59
 # Temple Place, Suite 330, Boston, MA 02111-1307 USA
@@ -23,7 +23,7 @@
 #EHEADER**********************************************************************
 
 ##################################################################
-# Import machine specific compilers, options, flags, etc.. 
+# Import machine specific compilers, options, flags, etc..
 ##################################################################
 
 BRAID_DIR=../braid
@@ -31,13 +31,19 @@ include ../makefile.inc
 
 
 ##################################################################
-# Build exmaples 
+# Build exmaples
 ##################################################################
 
-HYPRE_DIR = ../../hypre/src/hypre
+# default values for hypre install location and library file
+ifndef HYPRE_DIR
+   HYPRE_DIR = ../../hypre/src/hypre
+endif
+ifndef HYPRE_LIBRARY_FILE
+   HYPRE_LIBRARY_FILE = libHYPRE.a
+endif
 HYPRE_FLAGS = -I$(HYPRE_DIR)/include
 HYPRE_LIB = -L$(HYPRE_DIR)/lib -lHYPRE
-HYPRE_LIB_FILE = $(HYPRE_DIR)/lib/libHYPRE.a
+HYPRE_LIB_FILE = $(HYPRE_DIR)/lib/$(HYPRE_LIBRARY_FILE)
 
 MFEM_DIR = ../../mfem
 MFEM_CONFIG_MK = $(MFEM_DIR)/config/config.mk
@@ -48,7 +54,7 @@ BRAID_FLAGS = -I$(BRAID_DIR)
 BRAID_LIB_FILE = $(BRAID_DIR)/libbraid.a
 
 C_NOHYPRE = ex-01 ex-01-adjoint ex-01-optimization ex-01-refinement ex-01-expanded ex-01-expanded-bdf2 ex-02 ex-04 ex-04-serial
-CPP_NOHYPRE = ex-01-pp 
+CPP_NOHYPRE = ex-01-pp
 F_NOHYPRE = ex-01-expanded-f
 C_EXAMPLES = ex-03 ex-03-serial
 # Note: .cpp examples will be linked with mfem
@@ -66,12 +72,12 @@ all: $(C_NOHYPRE) $(CPP_NOHYPRE) $(C_EXAMPLES) $(CXX_EXAMPLES)
 ex-01: ex-01.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-	
+
 # Rule for building ex-01-adjoint
 ex-01-adjoint: ex-01-adjoint.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
 	$(MPICC) $(CFLAGS) $(BRAID_FLAGS) $(@).c -o $@ $(BRAID_LIB_FILE) $(LFLAGS)
-	
+
 # Rule for building ex-01-optimization
 ex-01-optimization: ex-01-optimization.c $(BRAID_LIB_FILE)
 	@echo "Building" $@ "..."
@@ -160,4 +166,3 @@ clean: cleanout
 
 cleanout:
 	rm -f ex*.out.*
-
