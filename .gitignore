@@ -10,3 +10,6 @@
 # examples executables
 /examples/ex-*
 !/examples/ex-*.*
+
+# debug symbols on osx
+/examples/*.dSYM/
