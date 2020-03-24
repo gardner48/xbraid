@@ -206,8 +206,8 @@ int main (int argc, char *argv[])
    nly = iupper[1] - ilower[1] + 1;
 
    /* Compute grid spacing. */
-   dx = PI / (nx - 1);
-   dy = PI / (ny - 1);
+   dx = 1.0 / (nx - 1);
+   dy = 1.0 / (ny - 1);
 
    /* Set time-step size, noting that the CFL number definition
     *     K*(dt/dx^2 + dt/dy^2) = CFL

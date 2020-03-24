@@ -241,7 +241,7 @@ int GetDistribution_x( int    npoints,
  * Initial condition
  * -------------------------------------------------------------------- */
 double U0(double x, double y){
-    return sin(x)*sin(y);
+    return sin(2.0*PI*x)*sin(2.0*PI*y);
 }
 
 
@@ -250,9 +250,9 @@ double U0(double x, double y){
  * -------------------------------------------------------------------- */
 double U_exact(simulation_manager *man, double x, double y, double t){
    if(man->forcing)
-      return sin(x)*sin(y)*cos(t);
+      return sin(2.0*PI*x)*sin(2.0*PI*y)*cos(2.0*PI*t);
    else
-      return exp(-2.*t)*sin(x)*sin(y);
+      return exp(-2.0*t)*sin(2.0*PI*x)*sin(2.0*PI*y);
 }
 
 /* --------------------------------------------------------------------
@@ -266,7 +266,8 @@ double B0(double x, double y){
  * Forcing term: b(x,y,t) = -sin(x)*sin(y)*( sin(t) - 2*K*cos(t) )
  * -------------------------------------------------------------------- */
 double Ft(double x, double y, double t, double K){
-   return (-1.0)*sin(x)*sin(y)*( sin(t) - 2.0*K*cos(t) );
+   return (-1.0*sin(2.0*PI*x)*sin(2.0*PI*y)*
+           (2.0*PI*sin(2.0*PI*t) - 2.0*K*4.0*PI*PI*cos(2.0*PI*t)));
 }
 
 /* --------------------------------------------------------------------
