@@ -64,13 +64,14 @@ int main (int argc, char *argv[])
 
    int print_usage = 0;
    int object_type = HYPRE_STRUCT;
-   int i, arg_index, myid, num_procs, iters_taken, total_iters_taken, max_iters_taken;
+   int i, j, arg_index, myid, num_procs, iters_taken, total_iters_taken, max_iters_taken;
    int ndim, nx, ny, nlx, nly, nt, forcing, ilower[2], iupper[2];
    double K, tstart, tstop, dx, dy, dt, cfl, tol;
    double myendtime, mystarttime, mytime, maxtime;
-   double disc_err, max_disc_err, max_disc_err_time;
+   double disc_err, max_disc_err, max_disc_err_time, max_err, max_err_global;
    int max_iter, px, py, pi, pj, output_files, vis, max_disc_err_iter, logging;
    char filename[255], filename_mesh[255], filename_err[255], filename_sol[255];
+   double *values;
 
    /* Initialize MPI */
    MPI_Init(&argc, &argv);
@@ -280,6 +281,8 @@ int main (int argc, char *argv[])
    total_iters_taken = 0;
    max_iters_taken = -1;
    max_disc_err = -1.;
+   max_err = -1.;
+   max_err_global = -1.;
    tstart = 0.0;
    tstop = tstart + dt;
    for(i = 0; i < man->nt; i++)
@@ -294,6 +297,15 @@ int main (int argc, char *argv[])
          tstart = tstop;
          tstop = tstop + dt;
       }
+
+      /* Max error */
+      compute_error(man, u, tstop, e);
+      values = (double *) malloc( (man->nlx) * (man->nly) * sizeof(double) );
+      HYPRE_SStructVectorGetBoxValues( e, 0, man->ilower, man->iupper, 0, values );
+      for( j = 0; j < ((man->nlx) * (man->nly)); j++ )
+         if (fabs(values[j]) > max_err) max_err = fabs(values[j]);
+      free( values );
+      MPI_Reduce( &max_err, &max_err_global, 1, MPI_DOUBLE, MPI_MAX, 0, comm );
 
       /* Output */
       compute_disc_err(man, u, tstop, e, &disc_err);
@@ -339,6 +351,7 @@ int main (int argc, char *argv[])
       printf("  Max discr. error:             %1.2e\n",max_disc_err);
       printf("     found at iteration:        %d\n", max_disc_err_iter);
       printf("     found at time:             %1.2e\n\n", max_disc_err_time);
+      printf("  Max error:                    %20.16e\n", max_err_global);
    }
 
    /* Visualize final error */
