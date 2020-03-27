@@ -37,6 +37,7 @@
 #include "HYPRE_sstruct_ls.h"
 #include "_hypre_sstruct_mv.h"
 #include "_hypre_struct_ls.h" // access to print logging
+#include "_hypre_struct_mv.h" // access struct inner prod
 #include "braid.h"
 
 #include "vis.c"
@@ -267,7 +268,7 @@ double B0(double x, double y){
  * -------------------------------------------------------------------- */
 double Ft(double x, double y, double t, double K){
    return (-1.0*sin(2.0*PI*x)*sin(2.0*PI*y)*
-           (2.0*PI*sin(2.0*PI*t) - 2.0*K*4.0*PI*PI*cos(2.0*PI*t)));
+           (2.0*PI*sin(2.0*PI*t) - 8.0*PI*PI*K*cos(2.0*PI*t)));
 }
 
 /* --------------------------------------------------------------------
@@ -1494,6 +1495,7 @@ int take_step(simulation_manager * man,         /* manager holding basic sim inf
    HYPRE_SStructVector b;
    HYPRE_StructMatrix  sA;
    HYPRE_StructVector  sxstop, sbstop, sx, sb;
+   double dot;
 
    int myid;
    MPI_Comm_rank( man->comm, &myid ); // for printing logging information
@@ -1554,6 +1556,8 @@ int take_step(simulation_manager * man,         /* manager holding basic sim inf
       }
       HYPRE_StructPFMGSetTol( man->solver, tol );
       HYPRE_StructPFMGSetMaxIter( man->solver, iters);
+      dot = hypre_StructInnerProd( sb, sb);
+      printf("b_dot_b = %20.16e sqrt(b_dot_b) = %20.16e \n", dot, sqrt(dot));
       HYPRE_StructPFMGSolve( man->solver, sA, sb, sx );
       HYPRE_StructPFMGGetNumIterations( man->solver, &num_iters);
       (*iters_taken) = num_iters;
