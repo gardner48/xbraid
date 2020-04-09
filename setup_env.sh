@@ -17,17 +17,18 @@ if [ "$HOST" == "Sandcastle.llnl.gov" ]; then
 
 else
 
-    loadspack sunenv
+    source ~/.bashrc
+    loadspack local
 
-    spack load gcc@9.2.0
+    module load gcc-9.3.0
     export CC=gcc
 
-    spack load openmpi%gcc@9.2.0
+    module load openmpi-3.1.5
     export MPICC=mpicc
     export MPICXX=mpicxx
 
-    spack load hypre%gcc@9.2.0~int64
-    export HYPRE_DIR="$(spack location -i hypre%gcc@9.2.0~int64)"
+    module load hypre-2.18.2-int32
+    export HYPRE_DIR=${HYPRE_ROOT}
     export HYPRE_LIBRARY_FILE=libHYPRE.so
 
 fi
