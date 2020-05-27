@@ -15,6 +15,22 @@ if [ "$HOST" == "Sandcastle.llnl.gov" ]; then
     export HYPRE_DIR=${HYPRE_ROOT}
     export HYPRE_LIBRARY_FILE=libHYPRE.a
 
+elif [ "$HOST" == "quartz" ]; then
+
+    module load gcc/8.1.0
+    export CC=gcc
+    export CXX=g++
+    export FC=gfortran
+
+    module load mvapich2/2.3
+    export MPICC=mpicc
+    export MPICXX=mpicxx
+    export MPIFC=mpifort
+
+    export CFLAGS='-g -O2'
+    export CXXFLAGS='-g -O2'
+    export FORTFLAGS='-g -O2'
+
 else
 
     source ~/.bashrc
@@ -32,3 +48,5 @@ else
     export HYPRE_LIBRARY_FILE=libHYPRE.so
 
 fi
+
+export XBRAID_ROOT=${PWD}/braid
